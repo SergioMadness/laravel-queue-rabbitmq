@@ -1,13 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Tests\Feature;
 
+use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobTimedOut;
 use Illuminate\Queue\Events\WorkerStopping;
+use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerStopReason;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Tests\Mocks\RetryOnceJob;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Tests\Mocks\SlowJob;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Tests\Mocks\TestJob;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Tests\TestCase;
 
@@ -72,6 +79,72 @@ class ConsumeCommandTest extends TestCase
         if (enum_exists(WorkerStopReason::class)) {
             $this->assertSame(WorkerStopReason::QueueEmpty, $stopping->reason);
         }
+    }
+
+    public function testConsumeStopsAfterQueueRestart(): void
+    {
+        Event::listen(JobProcessed::class, function (): void {
+            $this->artisan('queue:restart')->run();
+        });
+        Queue::push(new TestJob, '', $this->queue);
+
+        [$processed, $stopping] = $this->consume([]);
+
+        $this->assertSame(1, $processed);
+        $this->assertSame(0, $stopping->status);
+        $this->assertSame(WorkerStopReason::ReceivedRestartSignal, $stopping->reason);
+    }
+
+    public function testConsumeRetriesFailedJob(): void
+    {
+        RetryOnceJob::$runs = 0;
+        $exceptions = 0;
+        Event::listen(JobExceptionOccurred::class, function () use (&$exceptions): void {
+            $exceptions++;
+        });
+        Queue::push(new RetryOnceJob, '', $this->queue);
+
+        [$processed, $stopping] = $this->consume(['--tries' => 2, '--max-jobs' => 2]);
+
+        $this->assertSame(2, RetryOnceJob::$runs);
+        $this->assertSame(1, $exceptions);
+        $this->assertSame(1, $processed);
+        $this->assertSame(WorkerStopReason::MaxJobsExceeded, $stopping->reason);
+    }
+
+    public function testConsumeEnforcesJobTimeout(): void
+    {
+        if (! extension_loaded('pcntl') || ! property_exists(Worker::class, 'killOnTimeout')) {
+            $this->markTestSkipped('Requires pcntl and a worker with configurable timeout termination.');
+        }
+
+        $timedOut = 0;
+        Event::listen(JobTimedOut::class, function () use (&$timedOut): void {
+            $timedOut++;
+        });
+        config(['queue.failed.driver' => null]);
+        Queue::push(new SlowJob, '', $this->queue);
+        $previous = Worker::$killOnTimeout;
+        Worker::$killOnTimeout = false;
+
+        try {
+            [$processed, $stopping] = $this->consume(['--timeout' => 1, '--tries' => 1, '--max-jobs' => 1]);
+        } finally {
+            Worker::$killOnTimeout = $previous;
+        }
+
+        $this->assertSame(1, $timedOut);
+        $this->assertSame(0, $processed);
+        $this->assertSame(WorkerStopReason::MaxJobsExceeded, $stopping->reason);
+    }
+
+    public function testConsumeStopsAfterIdleLimit(): void
+    {
+        $start = hrtime(true);
+        [, $stopping] = $this->consume(['--stop-when-empty-for' => 1]);
+
+        $this->assertGreaterThanOrEqual(1, (hrtime(true) - $start) / 1e9);
+        $this->assertSame(WorkerStopReason::QueueEmptyFor, $stopping->reason);
     }
 
     /**
