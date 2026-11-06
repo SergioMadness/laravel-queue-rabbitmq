@@ -1,0 +1,75 @@
+tests/Feature/ConsumeCommandTest.php
+  s_0e041835b599dc::t_e192ef906d6e46 3-4,7,9,11,16-17,84-149
+tests/Mocks/SlowJob.php
+  s_0e041835b599dc::t_3642cd50b4d4a1 1-13
+tests/Mocks/RetryOnceJob.php
+  s_0e041835b599dc::t_3642cd50b4d4a1 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "0.0.67",
+  "base_commit_sha": "2770e5dce2a9b9ca139f3a516f9e9f0995f45417",
+  "prompts": {},
+  "sessions": {
+    "s_0e041835b599dc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b0bd-4eb3-7c82-af60-3c8e5db414f9",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "SergioMadness <madness.sergio@gmail.com>",
+      "usage": [
+        {
+          "model": "gpt-6-astra",
+          "input_tokens": 330331,
+          "output_tokens": 31675,
+          "cache_read_tokens": 14955136,
+          "cache_write_5m_tokens": 0,
+          "cache_write_1h_tokens": 0,
+          "assistant_messages": 113,
+          "turns": 18,
+          "ai_wall_ms": 1168720,
+          "first_ts": "2026-11-06T12:03:47.441Z",
+          "last_ts": "2026-11-06T12:56:26.987Z",
+          "session_total_output_tokens": 31675
+        }
+      ],
+      "tools": [
+        {
+          "tool": "exec",
+          "model": "gpt-6-astra",
+          "calls": 91,
+          "result_chars": 593930,
+          "result_input_tokens": 193205,
+          "result_cache_write_5m_tokens": 0,
+          "result_cache_write_1h_tokens": 0,
+          "call_output_tokens": 27348
+        },
+        {
+          "tool": "request_user_input_async",
+          "model": "gpt-6-astra",
+          "calls": 1,
+          "result_chars": 17,
+          "result_input_tokens": 114,
+          "result_cache_write_5m_tokens": 0,
+          "result_cache_write_1h_tokens": 0,
+          "call_output_tokens": 200
+        },
+        {
+          "tool": "sleep",
+          "model": "gpt-6-astra",
+          "calls": 5,
+          "result_chars": 215,
+          "result_input_tokens": 120699,
+          "result_cache_write_5m_tokens": 0,
+          "result_cache_write_1h_tokens": 0,
+          "call_output_tokens": 645
+        }
+      ],
+      "context_at_start_tokens": 23569,
+      "accepted_lines": 105,
+      "overridden_lines": 0
+    }
+  },
+  "install_id": "84cb1916-2123-4a4a-bdae-204439676f0a"
+}
